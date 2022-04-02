@@ -1,3 +1,0 @@
-[submodule "processing-scripts/transcribe/news-graph"]
-	path = processing-scripts/news-graph
-	url = git@github.com:BrambleXu/news-graph.git
