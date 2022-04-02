@@ -4,7 +4,10 @@ import os
 from sys import stderr
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
+from pydub.silence import detect_nonsilent
 import time
+import tempfile
+import json
 
 def transcribe(filename):
     r = sr.Recognizer()
@@ -20,47 +23,66 @@ def transcribe(filename):
         print(f'Sphinx error: {e}', file=stderr)
 
 # https://www.thepythoncode.com/article/using-speech-recognition-to-convert-speech-to-text-python
-def transcribe_in_chunks(path):
+def transcribe_in_chunks(path_input):
     r = sr.Recognizer()
 
     begin_split = time.time()
 
-    sound = AudioSegment.from_wav(path)
+    MS = 1000
+
+    sound = AudioSegment.from_wav(path_input)
     chunks = split_on_silence(sound,
-        min_silence_len = 500,
+        min_silence_len = 1000,
         silence_thresh = sound.dBFS-14,
-        keep_silence=500,
+        keep_silence=300,
+    )
+    non_silent = detect_nonsilent(sound,
+        min_silence_len=1000,
+        silence_thresh=sound.dBFS-14,
+        seek_step=1
     )
 
+    print(len(chunks), len(non_silent))
     print(f'Split took {time.time() - begin_split}s')
 
-    folder_name = "audio-chunks"
+    ret = []
+    full_text = ""
 
-    if not os.path.isdir(folder_name):
-        os.mkdir(folder_name)
-
-    whole_text = ""
-
-    for i, audio_chunk in enumerate(chunks, start=1):
-        chunk_filename = os.path.join(folder_name, f"chunk{i}.wav")
-        audio_chunk.export(chunk_filename, format="wav")
-        with sr.AudioFile(chunk_filename) as source:
+    for i, audio_chunk in enumerate(chunks):
+        fp = tempfile.NamedTemporaryFile()
+        audio_chunk.export(fp.name, format="wav")
+        with sr.AudioFile(fp.name) as source:
             audio_listened = r.record(source)
+            text = ""
             try:
                 text = r.recognize_google(audio_listened)
             except sr.UnknownValueError as e:
                 print("Error:", str(e))
             else:
                 text = f"{text.capitalize()}. "
-                print(chunk_filename, ":", text)
-                whole_text += text
+                print(fp.name, ":", text)
 
-    return whole_text
+            ret.append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
+            full_text += text
+            print({'text': text, 'start': non_silent[i][0] / MS, 'end': non_silent[i][1] / MS})
+
+    return {'text_info': ret, 'full_text': full_text}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transcribe an audio file')
     parser.add_argument('input', type=str)
+    parser.add_argument('output_splits', type=str)
+    parser.add_argument('output_full_text', type=str)
     args = parser.parse_args()
 
     # print(transcribe(args.input))
-    print(transcribe_in_chunks(args.input))
+    ret = transcribe_in_chunks(args.input)
+    ret_json = {
+        'split_info': ret['text_info'],
+    }
+    with open(args.output_splits, 'w') as outfile:
+        json.dump(json.dumps(ret_json), outfile)
+
+    with open(args.output_full_text, 'w') as outfile:
+        outfile.write(ret['full_text'])

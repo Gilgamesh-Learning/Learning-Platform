@@ -1,35 +1,72 @@
 const express = require('express');
-const multer = require('multer');
+const FileUpload = require('express-fileupload');
+const { join, extname, dirname } = require('path');
+const util = require('util');
+const { spawn } = require('child_process');
+const process = require('process');
 
 const app = express();
-const path = require('path');
 
-app.use(express.static('public'));
+app.use('/data', express.static('data'));
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     next();
 });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public')
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname)
-    }
+const fileUploadMiddleware = FileUpload({
+    createParentPath: true,
 });
 
-const upload = multer({storage}).array('file');
+const spawnPromise = (cmd, ...args) => new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args);
 
-app.post('/upload', (req, res) => {
-    upload(req, res, (err) => {
-        if (err) {
-            return res.status(500).json(err)
-        }
+    proc.stdout.on('data', (data) => process.stdout.write(data));
+    proc.stderr.on('data', (data) => process.stderr.write(data));
 
-        return res.status(200).send(req.files)
-    })
+    proc.on('close', resolve);
+    proc.on('error', reject);
+})
+
+const processFile = async (path) => {
+    const dir = dirname(path);
+    const processingScripts = join(dirname(require.main.filename), '..', 'processing-scripts');
+
+    try {
+        spawnPromise('ffmpeg', '-i', path, join(dir, 'audio.wav'));
+    } catch(err) {
+        console.error(err);
+        return;
+    }
+
+    try {
+        spawnPromise(
+            'python3',
+            join(processingScripts, 'transcribe', 'transcribe.py'),
+            join(dir, 'audio.wav'),
+            join(dir, 'splits.json'),
+            join(dir, 'transcription.txt')
+        );
+    } catch(err) {
+        console.error(err);
+        return;
+    }
+}
+
+app.post('/upload', fileUploadMiddleware, async (req, res) => {
+    const file = req.files.file;
+    const dataDir = join(dirname(require.main.filename), 'data');
+    const path = join(dataDir, file.md5, 'original' + extname(file.name));
+
+    if (file == null) res.sendStatus(400);
+
+    file.mv(path);
+
+    processFile(path);
+
+    res.status(200).json({
+        md5: file.md5,
+    });
 });
 
 app.listen(8000, () => {
