@@ -6,7 +6,7 @@ import numpy as np
 import math
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Transcribe an audio file')
+    parser = argparse.ArgumentParser(description='Find a word in an audio file')
     parser.add_argument('input', type=str)
     parser.add_argument('input_word', type=str)
     parser.add_argument('output_times_json', type=str)
@@ -55,13 +55,16 @@ if __name__ == '__main__':
         for i in range(CNT_ITER):
             sum += simil_with_input(tokens[i])
 
-        return sum
+        return sum / CNT_ITER
 
-    all_sents.sort(key = lambda x: get_val_from_sent(x))
+    timestamps = []
+
+    time_now = 0
 
     for sent in all_sents:
-        print(sent, get_val_from_sent(sent))
+        timestamps.append({'time': time_now + (sent['end'] - sent['start']) / 2, 'relevant': get_val_from_sent(sent)})
+        time_now += sent['end'] - sent['start']
 
     with open(args.output_times_json, 'w+') as f:
-        f.write('{"timestamps": [{"start": 1200, "end": 1200}]}')
+        json.dump(timestamps, f)
 
