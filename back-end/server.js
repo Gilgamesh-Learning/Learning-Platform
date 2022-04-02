@@ -1,5 +1,5 @@
 const express = require('express');
-const multer = require('multer');
+const FileUpload = require('express-fileupload');
 
 const app = express();
 const path = require('path');
@@ -11,25 +11,18 @@ app.use((req, res, next) => {
     next();
 });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public')
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname)
-    }
+const fileUploadMiddleware = FileUpload({
+    createParentPath: true,
 });
 
-const upload = multer({storage}).array('file');
-
-app.post('/upload', (req, res) => {
-    upload(req, res, (err) => {
-        if (err) {
-            return res.status(500).json(err)
-        }
-
-        return res.status(200).send(req.files)
-    })
+app.post('/videos', fileUploadMiddleware, (req, res) => {
+    const file = req.files.file;
+    const dataDir = path.join(require.main.filename, '..', 'data');
+    if (file == null) res.sendStatus(400);
+    file.mv(path.join(dataDir, file.name));
+    res.status(200).json({
+        filename: file.name,
+    });
 });
 
 app.listen(8000, () => {
