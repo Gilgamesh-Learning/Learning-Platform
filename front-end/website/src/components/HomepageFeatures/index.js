@@ -27,8 +27,8 @@ const FeatureList = [
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Facilitate your online recources by using intuitive user data organizaton. Gilgamesh can
-        be with every type of online lecture or course.
+        Facilitate your online learning by using intuitive user data organizaton. Gilgamesh can
+        be utilizied with every type of online lecture or course.
       </>
     ),
   },
