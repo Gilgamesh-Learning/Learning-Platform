@@ -13,3 +13,5 @@ build/
 dist/
 
 *.wav
+
+__pycache__
