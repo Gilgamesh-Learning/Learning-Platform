@@ -32,12 +32,12 @@ def transcribe_in_chunks(path_input):
 
     sound = AudioSegment.from_wav(path_input)
     chunks = split_on_silence(sound,
-        min_silence_len = 750,
+        min_silence_len = 1000,
         silence_thresh = sound.dBFS-14,
-        keep_silence=500,
+        keep_silence=300,
     )
     non_silent = detect_nonsilent(sound,
-        min_silence_len=750,
+        min_silence_len=1000,
         silence_thresh=sound.dBFS-14,
         seek_step=1
     )
@@ -46,6 +46,7 @@ def transcribe_in_chunks(path_input):
     print(f'Split took {time.time() - begin_split}s')
 
     ret = []
+    full_text = ""
 
     for i, audio_chunk in enumerate(chunks):
         fp = tempfile.NamedTemporaryFile()
@@ -62,19 +63,26 @@ def transcribe_in_chunks(path_input):
                 print(fp.name, ":", text)
 
             ret.append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
+            full_text += text
             print({'text': text, 'start': non_silent[i][0] / MS, 'end': non_silent[i][1] / MS})
-    return ret
+
+    return {'text_info': ret, 'full_text': full_text}
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transcribe an audio file')
     parser.add_argument('input', type=str)
     parser.add_argument('output_splits', type=str)
+    parser.add_argument('output_full_text', type=str)
     args = parser.parse_args()
 
     # print(transcribe(args.input))
+    ret = transcribe_in_chunks(args.input)
     ret_json = {
-        'split_info': transcribe_in_chunks(args.input)
+        'split_info': ret['text_info'],
     }
     with open(args.output_splits, 'w') as outfile:
         json.dump(json.dumps(ret_json), outfile)
+
+    with open(args.output_full_text, 'w') as outfile:
+        outfile.write(ret['full_text'])
