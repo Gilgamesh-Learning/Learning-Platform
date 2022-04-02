@@ -1,21 +1,15 @@
 const express = require('express');
 const multer = require('multer');
-const cors = require('cors');
 
 const app = express();
 const path = require('path');
 
-app.get('/*', function(req, res) {
-  res.sendFile(path.join(__dirname, '//localhost:8000/index.html'), function(err) {
-    if (err) {
-      res.status(500).send(err)
-    }
-  })
-})
-
-
-app.use(cors());
 app.use(express.static('public'));
+
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+});
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
