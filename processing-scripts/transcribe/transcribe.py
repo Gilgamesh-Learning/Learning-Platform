@@ -9,6 +9,10 @@ import time
 import tempfile
 import json
 
+def match_target_amplitude(sound, target_dBFS):
+    change_in_dBFS = target_dBFS - sound.dBFS
+    return sound.apply_gain(change_in_dBFS)
+
 def transcribe(filename):
     r = sr.Recognizer()
     with sr.AudioFile(filename) as source:
@@ -31,14 +35,15 @@ def transcribe_in_chunks(path_input):
     MS = 1000
 
     sound = AudioSegment.from_wav(path_input)
+    sound = match_target_amplitude(sound, -20.0)
     chunks = split_on_silence(sound,
         min_silence_len = 1000,
         silence_thresh = sound.dBFS-14,
-        keep_silence=300,
+        keep_silence=900,
     )
     non_silent = detect_nonsilent(sound,
-        min_silence_len=1000,
-        silence_thresh=sound.dBFS-14,
+        min_silence_len = 1000,
+        silence_thresh = sound.dBFS-14,
         seek_step=1
     )
 
@@ -47,6 +52,7 @@ def transcribe_in_chunks(path_input):
 
     ret = []
     full_text = ""
+    time_sum = 0
 
     for i, audio_chunk in enumerate(chunks):
         fp = tempfile.NamedTemporaryFile()
@@ -65,6 +71,9 @@ def transcribe_in_chunks(path_input):
             ret.append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
             full_text += text
             print({'text': text, 'start': non_silent[i][0] / MS, 'end': non_silent[i][1] / MS})
+            time_sum += non_silent[i][1] / MS - non_silent[i][0] / MS
+
+    print("New time", time_sum)
 
     return {'text_info': ret, 'full_text': full_text}
 
@@ -82,7 +91,7 @@ if __name__ == '__main__':
         'split_info': ret['text_info'],
     }
     with open(args.output_splits, 'w') as outfile:
-        json.dump(json.dumps(ret_json), outfile)
+        json.dump(ret_json, outfile)
 
     with open(args.output_full_text, 'w') as outfile:
         outfile.write(ret['full_text'])
