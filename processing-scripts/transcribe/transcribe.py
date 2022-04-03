@@ -45,7 +45,7 @@ def transcribe_in_chunks(path_input):
     print(len(chunks), len(non_silent))
     print(f'Split took {time.time() - begin_split}s')
 
-    ret = []
+    ret = {'length': len(sound) / MS, 'split_info': []}
     full_text = ""
 
     for i, audio_chunk in enumerate(chunks):
@@ -62,11 +62,11 @@ def transcribe_in_chunks(path_input):
                 text = f"{text.capitalize()}. "
                 print(fp.name, ":", text)
 
-            ret.append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
+            ret['split_info'].append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
             full_text += text
             print({'text': text, 'start': non_silent[i][0] / MS, 'end': non_silent[i][1] / MS})
 
-    return {'text_info': ret, 'full_text': full_text}
+    return ret, full_text
 
 
 if __name__ == '__main__':
@@ -77,12 +77,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # print(transcribe(args.input))
-    ret = transcribe_in_chunks(args.input)
-    ret_json = {
-        'split_info': ret['text_info'],
-    }
+    text_info, full_text = transcribe_in_chunks(args.input)
     with open(args.output_splits, 'w') as outfile:
-        json.dump(json.dumps(ret_json), outfile)
+        json.dump(text_info, outfile)
 
     with open(args.output_full_text, 'w') as outfile:
-        outfile.write(ret['full_text'])
+        outfile.write(full_text)
