@@ -1,3 +1,4 @@
+import React from 'react'
 import { useState } from 'react';
 import { FileUploader } from './components/FileUploader';
 import { ToastContainer} from 'react-toastify';
