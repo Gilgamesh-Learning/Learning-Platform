@@ -38,6 +38,7 @@
     ]
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.3"
+    "@testing-library/jest-dom": "^5.16.3",
+    "docusaurus": "^1.14.7"
   }
 }

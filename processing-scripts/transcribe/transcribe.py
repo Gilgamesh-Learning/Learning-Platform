@@ -31,6 +31,8 @@ def transcribe_in_chunks(path_input):
     MS = 1000
 
     sound = AudioSegment.from_wav(path_input)
+    print(len(sound))
+
     chunks = split_on_silence(sound,
         min_silence_len = 1000,
         silence_thresh = sound.dBFS-14,
