@@ -10,12 +10,14 @@ const app = express();
 const processingScripts = join(dirname(require.main.filename), '..', 'processing-scripts');
 const dataDir = join(dirname(require.main.filename), 'data');
 
-app.use('/data', express.static(dataDir));
+
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     next();
 });
+
+app.use('/data', express.static(dataDir));
 
 const fileUploadMiddleware = FileUpload({
     createParentPath: true,
