@@ -70,13 +70,11 @@ def transcribe_in_chunks(path_input):
 
             ret.append({'text': text, 'start': non_silent[i][0], 'end': non_silent[i][1]})
             full_text += text
-            print({'text': text, 'start': non_silent[i][0] / MS, 'end': non_silent[i][1] / MS})
-            time_sum += non_silent[i][1] / MS - non_silent[i][0] / MS
+            print({'text': text, 'start': non_silent[i][0] / len(sound), 'end': non_silent[i][1] / len(sound)})
 
     print("New time", time_sum)
 
     return {'text_info': ret, 'full_text': full_text}
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transcribe an audio file')
