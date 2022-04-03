@@ -11,7 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('input_word', type=str)
     args = parser.parse_args()
 
-    nlp = spacy.load('en_core_web_lg')
+    nlp = spacy.load('en_core_web_sm')
 
     all_sents = json.load(open(os.path.relpath(args.input)))['split_info']
 
@@ -23,7 +23,9 @@ if __name__ == '__main__':
     for sent in all_sents:
         sent['text'] = sent['text'].lower()
 
-    simil_with_input = lambda x: np.sum(np.multiply(x.vector, input_word_vector)) / (np.linalg.norm(x.vector) + 1e-16)
+    def simil_with_input(x):
+        dot = np.sum(np.multiply(x.vector, input_word_vector)) / (np.linalg.norm(x.vector) + 1e-16)
+        return (dot + 1) / 2
 
     def remove_duplicate_tokens(tokens):
         ret_tokens = []
@@ -54,12 +56,9 @@ if __name__ == '__main__':
         for i in range(CNT_ITER):
             sum += simil_with_input(tokens[i])
 
-        return sum
+        return sum / CNT_ITER
 
-    all_sents.sort(key = lambda x: get_val_from_sent(x))
+    all_sents.sort(key = lambda x: -get_val_from_sent(x))
 
-    for sent in all_sents:
-        print(sent, get_val_from_sent(sent))
-
-    print('{"timestamps": [{"start": 1200, "end": 1200}]}')
-
+    all_sents = [{**sent, 'match': get_val_from_sent(sent)} for sent in all_sents]
+    print(json.dumps(all_sents))
